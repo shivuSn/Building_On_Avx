@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.18;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract Buyshoe is ERC20, Ownable {
+    enum ShoeType { PartyWear, SportsWear, Regular }
+
+    event ShoePurchased(
+        address indexed buyer,
+        ShoeType shoeType,
+        uint256 shoePrice
+    );
+
+    mapping(address => ShoeType) public userShoes;
+
+    uint256 public constant PartyWearShoePrice = 2000;
+    uint256 public constant SportsWearShoePrice = 1500;
+    uint256 public constant RegularShoePrice = 1000;
+
+    constructor(address initialOwner) ERC20("ShoeCoin", "SCC") Ownable(initialOwner) {}
+
+    function mintTokens(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
+
+    function burnTokens(uint256 amount) public {
+        require(amount > 0, "Amount to burn must be greater than zero");
+        require(balanceOf(msg.sender) >= amount, "Insufficient funds for token burn");
+        _burn(msg.sender, amount);
+    }
+
+    function RedeemShoe(string memory shoeType) public {
+        require(
+            keccak256(abi.encodePacked(shoeType)) == keccak256(abi.encodePacked("Party wear")) ||
+            keccak256(abi.encodePacked(shoeType)) == keccak256(abi.encodePacked("Sports wear")) ||
+            keccak256(abi.encodePacked(shoeType)) == keccak256(abi.encodePacked("Regular")),
+            "Invalid shoe type"
+        );
+
+        ShoeType typeOfShoe;
+        uint256 shoePrice;
+
+        if (keccak256(abi.encodePacked(shoeType)) == keccak256(abi.encodePacked("Party wear"))) {
+            require(balanceOf(msg.sender) >= PartyWearShoePrice, "Insufficient funds for shoe purchase");
+            typeOfShoe = ShoeType.PartyWear;
+            shoePrice = PartyWearShoePrice;
+            _burn(msg.sender, shoePrice);
+        } else if (keccak256(abi.encodePacked(shoeType)) == keccak256(abi.encodePacked("Sports wear"))) {
+            require(balanceOf(msg.sender) >= SportsWearShoePrice, "Insufficient funds for shoe purchase");
+            typeOfShoe = ShoeType.SportsWear;
+            shoePrice = SportsWearShoePrice;
+            _burn(msg.sender, shoePrice);
+        } else {
+            require(balanceOf(msg.sender) >= RegularShoePrice, "Insufficient funds for shoe purchase");
+            typeOfShoe = ShoeType.Regular;
+            shoePrice = RegularShoePrice;
+            _burn(msg.sender, shoePrice);
+        }
+
+        userShoes[msg.sender] = typeOfShoe;
+        emit ShoePurchased(msg.sender, typeOfShoe, shoePrice);
+    }
+
+    function transferShoeTokens(address to, uint256 amount) external {
+        require(to != address(0), "Invalid recipient address");
+        require(balanceOf(msg.sender) >= amount, "Insufficient funds for token transfer");
+        _transfer(msg.sender, to, amount);
+    }
+}
